@@ -24,12 +24,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.travelitinerary.ui.theme.TravelItineraryTheme
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun RegisterForm(navController: NavController) {
-    var username by remember { mutableStateOf(TextFieldValue("")) }
+fun RegisterScreen(navController: NavController) {
+    var email by remember { mutableStateOf(TextFieldValue("")) }
     var password by remember { mutableStateOf(TextFieldValue("")) }
     var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -39,24 +41,22 @@ fun RegisterForm(navController: NavController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Welcome to Travel Itinerary!",
+            text = "Create an Account",
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 20.dp) // Space between this and the next content
+            modifier = Modifier.padding(bottom = 20.dp)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Username input field
         TextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password input field
         TextField(
             value = password,
             onValueChange = { password = it },
@@ -67,37 +67,61 @@ fun RegisterForm(navController: NavController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Register Button
         Button(
             onClick = {
-                if (username.text.isEmpty() || password.text.isEmpty()) {
-                    // Display error message
-                    errorMessage = "Please fill in both fields"
-                } else {
-                    errorMessage = "Registration successful!"
-                    navController.navigate("main-page")
+                if (email.text.isEmpty() || password.text.isEmpty()) {
+                    errorMessage = "Please fill in all fields"
+                    return@Button
                 }
-            }
+
+                if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email.text).matches()) {
+                    errorMessage = "Please enter a valid email"
+                    return@Button
+                }
+
+                if (password.text.length < 6) {
+                    errorMessage = "Password must be at least 6 characters"
+                    return@Button
+                }
+
+                isLoading = true
+                FirebaseAuth.getInstance()
+                    .createUserWithEmailAndPassword(email.text, password.text)
+                    .addOnCompleteListener { task ->
+                        isLoading = false
+                        if (task.isSuccessful) {
+                            errorMessage = "Registration successful!"
+                            navController.navigate("login")
+                        } else {
+                            errorMessage = task.exception?.localizedMessage ?: "An error occurred"
+                        }
+                    }
+            },
+            enabled = !isLoading
         ) {
-            Text("Register")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Text("Register")
+            }
         }
 
-        // Show error or success message
         if (errorMessage.isNotBlank()) {
             Text(
                 text = errorMessage,
-                color = if (errorMessage == "Registration successful!") Color.Green else Color.Red,
+                color = if (errorMessage.contains("successful")) Color.Green else Color.Red,
                 modifier = Modifier.padding(top = 16.dp)
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Navigate back to login page
         TextButton(onClick = { navController.navigate("login") }) {
             Text("Already have an account? Login now")
         }
-
     }
 }
 
@@ -106,6 +130,6 @@ fun RegisterForm(navController: NavController) {
 fun RegisterPreview() {
     TravelItineraryTheme {
         val navController = rememberNavController()
-        RegisterForm(navController = navController)
+        RegisterScreen(navController = navController)
     }
 }

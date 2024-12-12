@@ -25,6 +25,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun RegisterScreen(navController: NavController) {
@@ -85,13 +86,34 @@ fun RegisterScreen(navController: NavController) {
                 }
 
                 isLoading = true
-                FirebaseAuth.getInstance()
-                    .createUserWithEmailAndPassword(email.text, password.text)
+                val auth = FirebaseAuth.getInstance()
+                val firestore = FirebaseFirestore.getInstance()
+
+                auth.createUserWithEmailAndPassword(email.text, password.text)
                     .addOnCompleteListener { task ->
                         isLoading = false
                         if (task.isSuccessful) {
-                            errorMessage = "Registration successful!"
-                            navController.navigate("login")
+                            val user = auth.currentUser
+                            if (user != null) {
+                                // Create a Firestore document for the user
+                                val userDoc = mapOf(
+                                    "email" to user.email,
+                                    "displayName" to user.displayName, // Optional, can be null
+                                    "createdAt" to System.currentTimeMillis(),
+                                    "entries" to emptyList<String>() // Placeholder for future entries
+                                )
+
+                                firestore.collection("users").document(user.uid).set(userDoc)
+                                    .addOnSuccessListener {
+                                        errorMessage = "Registration successful!"
+                                        navController.navigate("login")
+                                    }
+                                    .addOnFailureListener { e ->
+                                        errorMessage = "Failed to create user document: ${e.message}"
+                                    }
+                            } else {
+                                errorMessage = "User creation failed. Please try again."
+                            }
                         } else {
                             errorMessage = task.exception?.localizedMessage ?: "An error occurred"
                         }

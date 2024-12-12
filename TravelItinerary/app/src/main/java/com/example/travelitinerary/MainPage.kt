@@ -1,6 +1,7 @@
 package com.example.travelitinerary
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,14 +31,30 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+
 @Composable
 fun MainPage(navController: NavController) {
     val user = FirebaseAuth.getInstance().currentUser
     val userName = user?.displayName ?: "User" // Get the user's name or default to "User"
-    val entries = remember { mutableStateOf(listOf<String>()) } // Dummy list for user entries
+    val entries = remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
-    // Sample entries for now
-    entries.value = listOf("Europe Backpack", "Asia Travel") // Replace with actual entries fetched from Firestore
+    // Fetch entries from Firestore
+    LaunchedEffect(user?.uid) {
+        user?.let {
+            val firestore = FirebaseFirestore.getInstance()
+            firestore.collection("users")
+                .document(it.uid)
+                .collection("entries")
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    entries.value = snapshot.documents.map { doc -> doc.data ?: emptyMap() }
+                }
+                .addOnFailureListener { e ->
+                    Log.e("MainPage", "Failed to fetch entries: ${e.message}")
+                }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -45,6 +63,7 @@ fun MainPage(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
+        // Header row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -65,10 +84,11 @@ fun MainPage(navController: NavController) {
         if (entries.value.isEmpty()) {
             Text("No entries created yet", style = MaterialTheme.typography.bodyLarge)
         } else {
-            // Display list of entries
             LazyColumn {
                 items(entries.value) { entry ->
-                    EntryItem(entry = entry)
+                    val name = entry["name"] as? String ?: "Untitled"
+                    val date = entry["date"] as? String ?: "Unknown Date"
+                    EntryItem(entryName = name, entryDate = date)
                 }
             }
         }
@@ -78,29 +98,26 @@ fun MainPage(navController: NavController) {
         // Add New Entry Button
         Button(
             onClick = { navController.navigate("add-entry") },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
         ) {
             Text("Add a new entry")
         }
-        Spacer(modifier = Modifier.height(32.dp))
-
     }
 }
 
 @Composable
-fun EntryItem(entry: String) {
+fun EntryItem(entryName: String, entryDate: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        Text(
-            text = entry,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = entryName, style = MaterialTheme.typography.bodyMedium)
+            Text(text = entryDate, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 

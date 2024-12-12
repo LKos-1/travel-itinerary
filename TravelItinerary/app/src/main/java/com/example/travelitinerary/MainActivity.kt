@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
                 composable("main-page") { MainPage(navController) }
                 composable("profile") { ProfilePage(navController) }
                 composable("edit-profile") { EditProfilePage(navController) }
+                composable("add-entry") { AddEntryPage(navController) }
             }
         }
     }
@@ -97,7 +98,7 @@ fun LoginForm(navController: NavController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Log In to Travel Itinerary",
+            text = "Welcome to Travel Itinerary!",
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 20.dp)
         )

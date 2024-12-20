@@ -48,6 +48,14 @@ class MainActivity : ComponentActivity() {
                 composable("profile") { ProfilePage(navController) }
                 composable("edit-profile") { EditProfilePage(navController) }
                 composable("add-entry") { AddEntryPage(navController) }
+                composable("entry-detail/{entryId}") { backStackEntry ->
+                    val entryId = backStackEntry.arguments?.getString("entryId") ?: ""
+                    if (entryId.isNotBlank()) {
+                        EntryDetailPage(navController = navController, entryId = entryId)
+                    } else {
+                        Text("Invalid entry ID", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
             }
         }
     }

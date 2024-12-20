@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -39,7 +40,14 @@ import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import java.net.URL
 
 @Composable
 fun AddEntryPage(navController: NavController) {
@@ -48,7 +56,9 @@ fun AddEntryPage(navController: NavController) {
 
     var name by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
-    var destinations by remember { mutableStateOf("") }
+    var selectedDestinations by remember { mutableStateOf(mutableListOf<String>()) }
+    var currentDestinationInput by remember { mutableStateOf("") }
+    var destinationSuggestions by remember { mutableStateOf(emptyList<String>()) }
     var rating by remember { mutableStateOf("") }
 
     Column(
@@ -62,6 +72,7 @@ fun AddEntryPage(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Entry Name Field
         TextField(
             value = name,
             onValueChange = { name = it },
@@ -71,6 +82,7 @@ fun AddEntryPage(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Date Field
         TextField(
             value = date,
             onValueChange = { date = it },
@@ -80,15 +92,46 @@ fun AddEntryPage(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Destinations Input with Fetching
         TextField(
-            value = destinations,
-            onValueChange = { destinations = it },
-            label = { Text("Destinations (comma-separated)") },
+            value = currentDestinationInput,
+            onValueChange = { input ->
+                currentDestinationInput = input
+                if (input.length >= 2) { // Fetch suggestions when input has 2+ characters
+                    fetchCitiesFromNominatim(input) { result ->
+                        destinationSuggestions = result
+                    }
+                } else {
+                    destinationSuggestions = emptyList()
+                }
+            },
+            label = { Text("Search Destination") },
             modifier = Modifier.fillMaxWidth()
         )
+        LazyColumn {
+            items(destinationSuggestions) { suggestion ->
+                Text(
+                    text = suggestion,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (!selectedDestinations.contains(suggestion)) {
+                                selectedDestinations.add(suggestion)
+                                currentDestinationInput = ""
+                                destinationSuggestions = emptyList()
+                            }
+                        }
+                        .padding(8.dp)
+                )
+            }
+        }
+        selectedDestinations.forEach { destination ->
+            Text(text = destination, style = MaterialTheme.typography.bodyLarge)
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Rating Field
         TextField(
             value = rating,
             onValueChange = { rating = it },
@@ -99,11 +142,12 @@ fun AddEntryPage(navController: NavController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Save Button
         Button(onClick = {
             val entry = hashMapOf(
                 "name" to name,
                 "date" to date,
-                "destinations" to destinations.split(",").map { it.trim() },
+                "destinations" to selectedDestinations,
                 "rating" to (rating.toIntOrNull() ?: 0)
             )
 
@@ -123,5 +167,47 @@ fun AddEntryPage(navController: NavController) {
         }) {
             Text("Save Entry")
         }
+    }
+}
+fun fetchCitiesFromNominatim(query: String, onResult: (List<String>) -> Unit) {
+    val url = "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1"
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val result = URL(url).readText()
+            val jsonArray = JSONArray(result)
+            val cities = mutableListOf<String>()
+
+            for (i in 0 until jsonArray.length()) {
+                val city = jsonArray.getJSONObject(i).optJSONObject("address")?.optString("city")
+                val town = jsonArray.getJSONObject(i).optJSONObject("address")?.optString("town")
+                if (city != null) cities.add(city)
+                else if (town != null) cities.add(town)
+            }
+
+            withContext(Dispatchers.Main) {
+                onResult(cities)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                onResult(emptyList())
+            }
+        }
+    }
+}
+@Composable
+fun Chip(
+    label: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        label()
     }
 }

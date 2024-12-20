@@ -47,11 +47,16 @@ fun MainPage(navController: NavController) {
                 .document(it.uid)
                 .collection("entries")
                 .get()
-                .addOnSuccessListener { snapshot ->
-                    entries.value = snapshot.documents.map { doc -> doc.data ?: emptyMap() }
+                .addOnSuccessListener { result ->
+                    val fetchedEntries = result.documents.map { doc ->
+                        doc.data?.toMutableMap()?.apply {
+                            this["id"] = doc.id // Attach Firestore document ID to the entry data
+                        } ?: emptyMap()
+                    }
+                    entries.value = fetchedEntries
                 }
                 .addOnFailureListener { e ->
-                    Log.e("MainPage", "Failed to fetch entries: ${e.message}")
+                    Log.e("MainPage", "Error fetching entries: ${e.message}")
                 }
         }
     }
@@ -86,12 +91,19 @@ fun MainPage(navController: NavController) {
         } else {
             LazyColumn {
                 items(entries.value) { entry ->
-                    val name = entry["name"] as? String ?: "Untitled"
-                    val date = entry["date"] as? String ?: "Unknown Date"
-                    EntryItem(entryName = name, entryDate = date)
+                    val entryId = entry["id"] as? String ?: ""
+
+                    EntryItem(
+                        entryName = entry["name"] as? String ?: "Untitled",
+                        entryDate = entry["date"] as? String ?: "Unknown date",
+                        onClick = {
+                            navController.navigate("entry-detail/${entryId}")
+                        }
+                    )
                 }
             }
         }
+
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -108,11 +120,12 @@ fun MainPage(navController: NavController) {
 }
 
 @Composable
-fun EntryItem(entryName: String, entryDate: String) {
+fun EntryItem(entryName: String, entryDate: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
+            .clickable(onClick = onClick)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = entryName, style = MaterialTheme.typography.bodyMedium)

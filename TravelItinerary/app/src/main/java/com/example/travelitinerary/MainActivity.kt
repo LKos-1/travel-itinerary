@@ -30,6 +30,7 @@ import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.google.firebase.auth.FirebaseAuth
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult;
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : ComponentActivity() {
     private val signInLauncher = registerForActivityResult(
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 composable("login") { LoginForm(navController) }
                 composable("register") { RegisterScreen(navController) }
                 composable("main-page") { MainPage(navController) }
+                composable("moderator-main-page") { ModeratorMainPage(navController) }
                 composable("profile") { ProfilePage(navController) }
                 composable("edit-profile") { EditProfilePage(navController) }
                 composable("add-entry") { AddEntryPage(navController) }
@@ -76,10 +78,35 @@ class MainActivity : ComponentActivity() {
         if (result.resultCode == RESULT_OK) {
             val user = FirebaseAuth.getInstance().currentUser
             if (user != null) {
-                setContent {
-                    val navController = rememberNavController()
-                    navController.navigate("main-page")
-                }
+                // Get Firestore instance
+                val firestore = FirebaseFirestore.getInstance()
+                // Reference to the user's Firestore document
+                val userDocRef = firestore.collection("users").document(user.uid)
+
+                // Fetch the user's role from Firestore
+                userDocRef.get()
+                    .addOnSuccessListener { document ->
+                        if (document != null && document.exists()) {
+                            val role = document.getString("role") //?: "user" // Default to "user" if role is missing
+                            setContent {
+                                val navController = rememberNavController()
+                                when (role) {
+                                    "moderator" -> navController.navigate("moderator-main-page")
+                                    "user" -> navController.navigate("main-page")
+                                    else -> {
+                                        // Handle unknown role (e.g., navigate to a generic error page or log out)
+                                        Toast.makeText(this, "Unknown role: $role", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        } else {
+                            // Document doesn't exist or user role not found
+                            Toast.makeText(this, "User data not found. Please try again.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, "Failed to fetch user data: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
             }
         } else {
             if (response == null) {
@@ -90,6 +117,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 }
 
 @Composable
@@ -138,8 +166,38 @@ fun LoginForm(navController: NavController) {
                     .signInWithEmailAndPassword(email.text, password.text)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            navController.navigate("main-page") {
-                                popUpTo("login") { inclusive = true }
+                            val user = FirebaseAuth.getInstance().currentUser
+                            if (user != null) {
+                                val firestore = FirebaseFirestore.getInstance()
+                                val userDocRef = firestore.collection("users").document(user.uid)
+
+                                // Fetch the user's role from Firestore
+                                userDocRef.get()
+                                    .addOnSuccessListener { document ->
+                                        if (document != null && document.exists()) {
+                                            val role = document.getString("role") //?: "user" // Default to "user" if role is missing
+                                            when (role) {
+                                                "moderator" -> {
+                                                    navController.navigate("moderator-main-page") {
+                                                        popUpTo("login") { inclusive = true }
+                                                    }
+                                                }
+                                                "user" -> {
+                                                    navController.navigate("main-page") {
+                                                        popUpTo("login") { inclusive = true }
+                                                    }
+                                                }
+                                                else -> {
+                                                    errorMessage = "Unknown role: $role"
+                                                }
+                                            }
+                                        } else {
+                                            errorMessage = "User data not found. Please contact support."
+                                        }
+                                    }
+                                    .addOnFailureListener { e ->
+                                        errorMessage = "Failed to fetch user data: ${e.message}"
+                                    }
                             }
                         } else {
                             errorMessage = task.exception?.localizedMessage ?: "Login failed"
@@ -151,6 +209,7 @@ fun LoginForm(navController: NavController) {
         }) {
             Text("Log In")
         }
+
 
         if (errorMessage.isNotBlank()) {
             Text(

@@ -100,7 +100,8 @@ fun RegisterScreen(navController: NavController) {
                                     "email" to user.email,
                                     "displayName" to user.displayName, // Optional, can be null
                                     "createdAt" to System.currentTimeMillis(),
-                                    "entries" to emptyList<String>() // Placeholder for future entries
+                                    "role" to "user", // Assign default role
+                                    //"entries" to emptyList<String>()
                                 )
 
                                 firestore.collection("users").document(user.uid).set(userDoc)

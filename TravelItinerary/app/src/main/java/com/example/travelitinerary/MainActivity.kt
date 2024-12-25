@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,7 +47,14 @@ class MainActivity : ComponentActivity() {
                 composable("login") { LoginForm(navController) }
                 composable("register") { RegisterScreen(navController) }
                 composable("main-page") { MainPage(navController) }
-                composable("moderator-main-page") { ModeratorMainPage(navController) }
+                composable("moderator-main-page/{email}") { backStackEntry ->
+                    val email = backStackEntry.arguments?.getString("email") ?: ""
+                    ModeratorMainPage(navController = navController, currentModeratorEmail = email)
+                }
+                composable("blocked-page/{email}") { backStackEntry ->
+                    val email = backStackEntry.arguments?.getString("email") ?: ""
+                    NavigateToBlockedPage(email = email, navController = navController)
+                }
                 composable("profile") { ProfilePage(navController) }
                 composable("edit-profile") { EditProfilePage(navController) }
                 composable("add-entry") { AddEntryPage(navController) }
@@ -91,8 +99,9 @@ class MainActivity : ComponentActivity() {
                             setContent {
                                 val navController = rememberNavController()
                                 when (role) {
-                                    "moderator" -> navController.navigate("moderator-main-page")
+                                    "moderator" -> navController.navigate("moderator-main-page/${user.email}")
                                     "user" -> navController.navigate("main-page")
+                                    "blocked" -> navController.navigate("blocked-page/${user.email}")
                                     else -> {
                                         // Handle unknown role (e.g., navigate to a generic error page or log out)
                                         Toast.makeText(this, "Unknown role: $role", Toast.LENGTH_SHORT).show()
@@ -178,7 +187,7 @@ fun LoginForm(navController: NavController) {
                                             val role = document.getString("role") //?: "user" // Default to "user" if role is missing
                                             when (role) {
                                                 "moderator" -> {
-                                                    navController.navigate("moderator-main-page") {
+                                                    navController.navigate("moderator-main-page/${user.email}") {
                                                         popUpTo("login") { inclusive = true }
                                                     }
                                                 }
@@ -187,8 +196,10 @@ fun LoginForm(navController: NavController) {
                                                         popUpTo("login") { inclusive = true }
                                                     }
                                                 }
-                                                else -> {
-                                                    errorMessage = "Unknown role: $role"
+                                                "blocked" -> {
+                                                    navController.navigate("blocked-page/${user.email}") {
+                                                        popUpTo("login") { inclusive = true }
+                                                    }
                                                 }
                                             }
                                         } else {
@@ -226,7 +237,46 @@ fun LoginForm(navController: NavController) {
         }
     }
 }
+@Composable
+fun NavigateToBlockedPage(email: String, navController: NavController) {
+    var blockedBy by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Fetch the blockedBy data
+    LaunchedEffect(email) {
+        fetchBlockedBy(email, { fetchedBlockedBy ->
+            blockedBy = fetchedBlockedBy
+        }, { error ->
+            errorMessage = error
+        })
+    }
+
+    // Display error message if there is any, otherwise pass blockedBy to BlockedUserPage
+    if (errorMessage != null) {
+        Text("Error: $errorMessage", color = Color.Red)
+    } else {
+        // Pass the blockedBy value to BlockedUserPage
+        BlockedUserPage(blockedBy = blockedBy, navController = navController)
+    }
+}
+fun fetchBlockedBy(email: String, onSuccess: (String?) -> Unit, onFailure: (String) -> Unit) {
+    val firestore = FirebaseFirestore.getInstance()
+    firestore.collection("users")
+        .whereEqualTo("email", email)
+        .get()
+        .addOnSuccessListener { documents ->
+            if (!documents.isEmpty) {
+                val document = documents.documents.first()
+                val blockedBy = document.getString("blockedBy")
+                onSuccess(blockedBy)
+            } else {
+                onSuccess(null) // User not found
+            }
+        }
+        .addOnFailureListener { e ->
+            onFailure(e.message ?: "Failed to fetch blockedBy")
+        }
+}
 @Preview(showBackground = true)
 @Composable
 fun LoginPreview() {

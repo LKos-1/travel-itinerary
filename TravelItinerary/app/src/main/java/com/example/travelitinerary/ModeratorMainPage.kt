@@ -31,58 +31,252 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
-fun ModeratorMainPage(navController: NavController) {
+fun ModeratorMainPage(navController: NavController, currentModeratorEmail: String) {
     var email by remember { mutableStateOf("") }
+    var statusMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     val firestore = FirebaseFirestore.getInstance()
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(
+            text = "Moderator Panel",
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.Black,
+            modifier = Modifier.padding(bottom = 32.dp) // Add spacing after title
+        )
         TextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Enter user email") }
+            label = { Text("Enter user email") },
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Button(onClick = {
-            // Fetch user document based on email
-            firestore.collection("users")
-                .whereEqualTo("email", email)
-                .get()
-                .addOnSuccessListener { documents ->
-                    for (document in documents) {
-                        val userId = document.id
-                        // Update the user's role to moderator
-                        assignRole(userId, "moderator", {
-                            Log.d("ModeratorMainPage", "Role updated successfully")
-                        }, { error ->
-                            Log.e("ModeratorMainPage", "Error updating role: $error")
-                        })
-                    }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Block User Button
+        Button(
+            onClick = {
+                if (email.isNotEmpty()) {
+                    isLoading = true
+                    statusMessage = ""
+                    // Fetch user document based on email
+                    firestore.collection("users")
+                        .whereEqualTo("email", email)
+                        .get()
+                        .addOnSuccessListener { documents ->
+                            if (!documents.isEmpty) {
+                                val document = documents.documents.first()
+                                val userId = document.id
+                                val role = document.getString("role") ?: "user"
+                                val blockedBy = document.getString("blockedBy")
+
+                                // Check if the user is a moderator
+                                if (role == "moderator") {
+                                    statusMessage = "Cannot block another moderator."
+                                } else if (currentModeratorEmail == email) {
+                                    statusMessage = "You cannot block yourself."
+                                } else if (role == "blocked") {
+                                    statusMessage = "This user is already blocked."
+                                } else {
+                                    assignRole(
+                                        userId,
+                                        "blocked",
+                                        blockedBy = currentModeratorEmail,
+                                        onSuccess = {
+                                            statusMessage = "User has been blocked successfully."
+                                        },
+                                        onFailure = { error ->
+                                            statusMessage = "Error blocking user: $error"
+                                        }
+                                    )
+                                }
+                            } else {
+                                statusMessage = "No user found with the provided email."
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            statusMessage = "Error fetching user: ${e.message}"
+                        }
+                        .addOnCompleteListener {
+                            isLoading = false
+                        }
+                } else {
+                    statusMessage = "Please enter an email."
                 }
-                .addOnFailureListener { e ->
-                    Log.e("ModeratorMainPage", "Error fetching user: ${e.message}")
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Block User")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Unblock User Button
+        Button(
+            onClick = {
+                if (email.isNotEmpty()) {
+                    isLoading = true
+                    statusMessage = ""
+                    // Fetch user document based on email
+                    firestore.collection("users")
+                        .whereEqualTo("email", email)
+                        .get()
+                        .addOnSuccessListener { documents ->
+                            if (!documents.isEmpty) {
+                                val document = documents.documents.first()
+                                val userId = document.id
+                                val role = document.getString("role") ?: "user"
+
+                                if (role == "moderator") {
+                                    statusMessage = "Cannot unblock a moderator."
+                                } else if (currentModeratorEmail == email) {
+                                    statusMessage = "You cannot unblock yourself."
+                                } else if (role == "blocked") {
+                                    // Clear the "blockedBy" field when unblocking
+                                    assignRole(
+                                        userId,
+                                        "user",
+                                        blockedBy = null, // Clear blockedBy when unblocking
+                                        onSuccess = {
+                                            statusMessage = "User has been unblocked successfully."
+                                        },
+                                        onFailure = { error ->
+                                            statusMessage = "Error unblocking user: $error"
+                                        }
+                                    )
+                                } else {
+                                    statusMessage = "User is not blocked."
+                                }
+                            } else {
+                                statusMessage = "No user found with the provided email."
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            statusMessage = "Error fetching user: ${e.message}"
+                        }
+                        .addOnCompleteListener {
+                            isLoading = false
+                        }
+                } else {
+                    statusMessage = "Please enter an email."
                 }
-        }) {
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Unblock User")
+        }
+
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Promote User Button
+        Button(
+            onClick = {
+                if (email.isNotEmpty()) {
+                    isLoading = true
+                    statusMessage = ""
+                    // Fetch user document based on email
+                    firestore.collection("users")
+                        .whereEqualTo("email", email)
+                        .get()
+                        .addOnSuccessListener { documents ->
+                            if (!documents.isEmpty) {
+                                val document = documents.documents.first()
+                                val userId = document.id
+                                val role = document.getString("role") ?: "user"
+                                val blockedBy = document.getString("blockedBy")
+
+                                // Check if the user is already a moderator
+                                if (role == "moderator") {
+                                    statusMessage = "This user is already a moderator."
+                                } else if (role == "blocked") {
+                                    statusMessage = "This user is blocked and cannot be promoted."
+                                } else if (currentModeratorEmail == email) {
+                                    statusMessage = "You cannot promote yourself."
+                                } else {
+                                    assignRole(
+                                        userId,
+                                        "moderator",
+                                        blockedBy = null, // Clear blockedBy when promoting
+                                        onSuccess = {
+                                            statusMessage = "User has been promoted to moderator successfully."
+                                        },
+                                        onFailure = { error ->
+                                            statusMessage = "Error promoting user: $error"
+                                        }
+                                    )
+                                }
+                            } else {
+                                statusMessage = "No user found with the provided email."
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            statusMessage = "Error fetching user: ${e.message}"
+                        }
+                        .addOnCompleteListener {
+                            isLoading = false
+                        }
+                } else {
+                    statusMessage = "Please enter an email."
+                }
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Promote to Moderator")
         }
 
-        Button(onClick = { navController.popBackStack() }) {
-            Text("Back to Main Page")
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Status Message
+        if (statusMessage.isNotBlank()) {
+            Text(
+                text = statusMessage,
+                color = if (statusMessage.contains("successfully")) Color.Green else Color.Red,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = {
+                FirebaseAuth.getInstance().signOut()
+                navController.navigate("login") {
+                    popUpTo("main-page") { inclusive = true }
+                }
+            },
+        ) {
+            Text("Sign Out")
         }
     }
 }
 
-fun assignRole(userId: String, newRole: String, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
+fun assignRole(userId: String, newRole: String, blockedBy: String? = null, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
     val firestore = FirebaseFirestore.getInstance()
+    val updates = mutableMapOf<String, Any>("role" to newRole)
+
+    if (newRole == "blocked" && blockedBy != null) {
+        updates["blockedBy"] = blockedBy
+    } else if (newRole == "user") {
+        // Remove the blockedBy field completely from Firestore when unblocking
+        updates["blockedBy"] = FieldValue.delete()
+    }
 
     firestore.collection("users").document(userId)
-        .update("role", newRole)
+        .update(updates)
         .addOnSuccessListener {
             onSuccess()
         }
@@ -91,9 +285,4 @@ fun assignRole(userId: String, newRole: String, onSuccess: () -> Unit, onFailure
         }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ModeratorMainPagePreview() {
-    val navController = rememberNavController()
-    ModeratorMainPage(navController = navController)
-}
+

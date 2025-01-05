@@ -33,8 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.rememberAsyncImagePainter
-import coil.compose.rememberImagePainter
-import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable

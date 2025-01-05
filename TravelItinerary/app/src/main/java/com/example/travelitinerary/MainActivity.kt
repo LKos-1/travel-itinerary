@@ -1,13 +1,9 @@
 package com.example.travelitinerary
-
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,13 +14,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.*
 import com.firebase.ui.auth.AuthUI
@@ -58,6 +52,10 @@ class MainActivity : ComponentActivity() {
                 composable("profile") { ProfilePage(navController) }
                 composable("edit-profile") { EditProfilePage(navController) }
                 composable("add-entry") { AddEntryPage(navController) }
+                composable("add-entry/{entryId}") { backStackEntry ->
+                    val entryId = backStackEntry.arguments?.getString("entryId") ?: ""
+                    AddEntryPage(navController = navController, entryId = entryId)
+                }
                 composable("entry-detail/{entryId}") { backStackEntry ->
                     val entryId = backStackEntry.arguments?.getString("entryId") ?: ""
                     if (entryId.isNotBlank()) {
@@ -66,6 +64,31 @@ class MainActivity : ComponentActivity() {
                         Text("Invalid entry ID", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
+                composable("add-itinerary/{entryId}/{selectedCities}") { backStackEntry ->
+                    val entryId = backStackEntry.arguments?.getString("entryId") ?: ""
+                    //val entryId = navController.currentBackStackEntry?.arguments?.getString("entryId") ?: ""
+                    val selectedCitiesString = backStackEntry.arguments?.getString("selectedCities") ?: ""
+                    val selectedCities = selectedCitiesString.split(",").map { it.trim() }.toMutableList() // Convert the string back to a list
+                    ItineraryOverviewPage(navController = navController, entryId = entryId, selectedCities = selectedCities)
+                }
+                composable("itinerary-view/{city}") { backStackEntry ->
+                    val city = backStackEntry.arguments?.getString("city") ?: ""
+                    if (city.isNotBlank()) {
+                        ItineraryViewPage(navController = navController, city = city)
+                    } else {
+                        Text("Invalid city", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+
+                composable("itinerary-details/{city}") { backStackEntry ->
+                    val city = backStackEntry.arguments?.getString("city") ?: ""
+                    if (city.isNotBlank()) {
+                        ItineraryDetailsPage(navController = navController, city = city)
+                    } else {
+                        Text("Invalid city", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+
             }
         }
     }
@@ -95,7 +118,7 @@ class MainActivity : ComponentActivity() {
                 userDocRef.get()
                     .addOnSuccessListener { document ->
                         if (document != null && document.exists()) {
-                            val role = document.getString("role") //?: "user" // Default to "user" if role is missing
+                            val role = document.getString("role") ?: "user" // Default to "user" if role is missing
                             setContent {
                                 val navController = rememberNavController()
                                 when (role) {
@@ -184,7 +207,7 @@ fun LoginForm(navController: NavController) {
                                 userDocRef.get()
                                     .addOnSuccessListener { document ->
                                         if (document != null && document.exists()) {
-                                            val role = document.getString("role") //?: "user" // Default to "user" if role is missing
+                                            val role = document.getString("role") ?: "user" // Default to "user" if role is missing
                                             when (role) {
                                                 "moderator" -> {
                                                     navController.navigate("moderator-main-page/${user.email}") {

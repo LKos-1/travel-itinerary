@@ -32,6 +32,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.travelitinerary.ui.theme.TravelItineraryTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun MainPage(navController: NavController) {
@@ -51,6 +53,12 @@ fun MainPage(navController: NavController) {
                     val fetchedEntries = result.documents.map { doc ->
                         doc.data?.toMutableMap()?.apply {
                             this["id"] = doc.id // Attach Firestore document ID to the entry data
+                            val date = this["date"] as? com.google.firebase.Timestamp
+                            if (date != null) {
+                                // Convert Timestamp to a readable date format (yyyy-MM-dd)
+                                val formattedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date.toDate())
+                                this["date"] = formattedDate // Set the formatted date back
+                            }
                         } ?: emptyMap()
                     }
                     entries.value = fetchedEntries

@@ -110,25 +110,32 @@ fun ItineraryOverviewPage(
                                 .document(entryId)
                                 .collection("destinations")
                                 .whereEqualTo("name", city) // Query by the city name field
+                                .limit(1) // Ensure we only get the document matching the city
                                 .get()
                                 .addOnSuccessListener { querySnapshot ->
                                     Log.d("Itinerary", "Query result size: ${querySnapshot.size()}")
-                                    if (!querySnapshot.isEmpty) {
-                                        val destinationDoc = querySnapshot.documents[0] // Get the first document
-                                        val destinationId = destinationDoc.id // Get the unique document ID (destinationId)
-                                        if (destinationDoc.contains("itinerary")) {
-                                            navController.navigate("itinerary-view/$city")
-                                        } else {
-                                            // If no itinerary found, navigate to itinerary details page
-                                            navController.navigate("itinerary-details/$city")
-                                        }
+
+                                    if (querySnapshot.isEmpty) {
+                                        Log.e("Itinerary", "No destination found for city: $city")
+                                        return@addOnSuccessListener
+                                    }
+
+                                    // Since we have limited the query to 1 result, we can safely check this document
+                                    val document = querySnapshot.documents.first()
+
+                                    // Check if the selected document contains the "itinerary" field
+                                    if (document.data?.containsKey("itinerary") == false) {
+                                        // If the itinerary field exists, navigate to the itinerary view
+                                        navController.navigate("itinerary-view/$city")
                                     } else {
-                                        Log.e("Itinerary", "No destination found with city name: $city")
+                                        // If the itinerary field does not exist, navigate to the create itinerary page
+                                        navController.navigate("itinerary-details/$city/$entryId")
                                     }
                                 }
                                 .addOnFailureListener { e ->
                                     Log.e("Itinerary", "Failed to fetch destination: ${e.message}")
                                 }
+
                         }
                         .padding(8.dp),
                     shape = RoundedCornerShape(12.dp), // Rounded corners

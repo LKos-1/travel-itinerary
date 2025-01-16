@@ -80,10 +80,20 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                composable("itinerary-details/{city}") { backStackEntry ->
+                composable("itinerary-details/{city}/{entryId}") { backStackEntry ->
+                    val city = backStackEntry.arguments?.getString("city") ?: ""
+                    val entryId = backStackEntry.arguments?.getString("entryId") ?: ""
+
+                    if (city.isNotBlank() && entryId.isNotBlank()) {
+                        ItineraryDetailsPage(navController = navController, city = city, entryId = entryId)
+                    } else {
+                        Text("Invalid city or entryId", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+                composable("edit-itinerary/{city}") { backStackEntry ->
                     val city = backStackEntry.arguments?.getString("city") ?: ""
                     if (city.isNotBlank()) {
-                        ItineraryDetailsPage(navController = navController, city = city)
+                        EditItineraryPage(navController = navController, city = city)
                     } else {
                         Text("Invalid city", style = MaterialTheme.typography.bodyLarge)
                     }

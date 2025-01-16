@@ -35,7 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ItineraryViewPage(
+fun EditItineraryPage(
     navController: NavController,
     city: String
 ) {
@@ -45,15 +45,52 @@ fun ItineraryViewPage(
     val selectedCities = navController.previousBackStackEntry
         ?.arguments?.getString("selectedCities")
         ?.split(",")?.toMutableList() ?: mutableListOf()
+
+    // State variables for description, expenses, and error messages
     var description by remember { mutableStateOf("") }
     var expenses by remember { mutableStateOf(listOf<Pair<String, Double>>()) }
     var expenseAmount by remember { mutableStateOf("") }
     var expenseDescription by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
+    // Fetch the current itinerary information from Firestore to pre-fill the fields
+    LaunchedEffect(city) {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+        if (currentUserId != null) {
+            Log.d("Firestore", "currentUserId: $currentUserId")
+            Log.d("Firestore", "entryId: $entryId")
+
+            db.collection("users")
+                .document(currentUserId)
+                .collection("entries")
+                .document(entryId)
+                .collection("destinations")
+                .whereEqualTo("name", city)
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    Log.d("Firestore", "QuerySnapshot size: ${querySnapshot.size()}")
+                    if (!querySnapshot.isEmpty) {
+                        val document = querySnapshot.documents[0]
+                        Log.d("Firestore", "Document data: ${document.data}")
+                        val itinerary = document.get("itinerary") as? Map<*, *>
+                        description = itinerary?.get("description") as? String ?: ""
+                        expenses = (itinerary?.get("expenses") as? List<Map<String, Any>>)?.map {
+                            Pair(it["description"] as? String ?: "", it["amount"] as? Double ?: 0.0)
+                        } ?: emptyList()
+                    } else {
+                        errorMessage = "Destination not found"
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    errorMessage = "Error fetching itinerary: ${exception.message}"
+                }
+
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
 
-        Text("Itinerary for $city", style = MaterialTheme.typography.headlineMedium)
+        Text("Edit Itinerary for $city", style = MaterialTheme.typography.headlineMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -166,11 +203,10 @@ fun ItineraryViewPage(
                         .collection("entries")
                         .document(entryId)
                         .collection("destinations")
-                        .whereEqualTo("name", city) // Query for the city by its name
+                        .whereEqualTo("name", city)
                         .get()
                         .addOnSuccessListener { querySnapshot ->
                             if (!querySnapshot.isEmpty) {
-                                // Get the first matching document (assuming city name is unique)
                                 val document = querySnapshot.documents[0]
 
                                 // Update the existing destination document with the itinerary field
@@ -202,17 +238,10 @@ fun ItineraryViewPage(
         ) {
             Text("Save Itinerary")
         }
+
         Button(onClick = { navController.popBackStack() },
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
             Text("Back")
         }
     }
 }
-
-
-
-
-
-
-
-

@@ -49,50 +49,74 @@ fun ProfilePage(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        userPhotoUrl?.let {
-            Image(
-                painter = rememberAsyncImagePainter(it),
-                contentDescription = "Profile Picture",
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, Color.Gray, CircleShape)
+        // Profile Picture Card
+        Card(
+            modifier = Modifier
+                .size(140.dp)
+                .padding(bottom = 16.dp),
+            shape = CircleShape,
+        ) {
+            userPhotoUrl?.let {
+                Image(
+                    painter = rememberAsyncImagePainter(it),
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            } ?: run {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Profile Icon",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp) // Padding inside the icon
+                )
+            }
+        }
+
+        // Display Name in Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        ) {
+            Text(
+                text = "Name: $userName",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(16.dp)
             )
-        } ?: run {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Profile Icon",
-                modifier = Modifier.size(120.dp)
+        }
+
+        // Display Email in Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+        ) {
+            Text(
+                text = "Email: $userEmail",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(16.dp)
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display User Name
-        Text(
-            text = "Name: $userName",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        // Display User Email
-        Text(
-            text = "Email: $userEmail",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
         // Edit Profile Button
         Button(
             onClick = { navController.navigate("edit-profile") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
         ) {
             Text("Edit Profile")
         }
 
+        // Back Button
         Button(
             onClick = {
                 navController.popBackStack()  // Navigate back to the previous screen (MainPage)
-            }
+            },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
         ) {
             Text("Back")
         }
@@ -105,11 +129,13 @@ fun ProfilePage(navController: NavController) {
                     popUpTo("main-page") { inclusive = true }
                 }
             },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
         ) {
             Text("Sign Out")
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

@@ -67,7 +67,6 @@ fun EntryDetailPage(navController: NavController, entryId: String) {
     }
 
     // Fetch entry details from Firestore based on entryId
-    // Fetch entry details from Firestore based on entryId
     LaunchedEffect(entryId) {
         user?.let {
             // Fetch entry details from the "entries" collection
@@ -113,7 +112,6 @@ fun EntryDetailPage(navController: NavController, entryId: String) {
         }
     }
 
-
     // Show loading state or error message if necessary
     if (isLoading) {
         CircularProgressIndicator(modifier = Modifier.fillMaxSize())
@@ -131,32 +129,79 @@ fun EntryDetailPage(navController: NavController, entryId: String) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Name: $entryName", style = MaterialTheme.typography.bodyMedium)
-            Text("Date: $entryDate", style = MaterialTheme.typography.bodyMedium)
-            Text("Destinations: ${destinations.joinToString(", ")}", style = MaterialTheme.typography.bodyMedium)
-            Text("Rating: $rating", style = MaterialTheme.typography.bodyMedium)
+            // Entry details
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(
+                    "Name: $entryName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(
+                    "Date: $entryDate",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(
+                    "Destinations: ${destinations.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(
+                    "Rating: $rating",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            // Add or view itinerary button
             Button(
                 onClick = {
                     val citiesString = destinations.joinToString(",")
-                    navController.navigate("add-itinerary/$entryId/$citiesString") },
-                modifier = Modifier.padding(top = 16.dp)
+                    navController.navigate("add-itinerary/$entryId/$citiesString")
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
             ) {
-                Text("Add or view Itinerary")
+                Text("Add or View Itinerary")
             }
 
-            // Edit Button
+            // Edit button
             Button(
                 onClick = {
                     navController.navigate("add-entry/$entryId")
                 },
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
             ) {
                 Text("Edit Entry")
             }
 
-            // Delete Button
+            // Delete button
             Button(
                 onClick = {
                     user?.let {
@@ -174,18 +219,21 @@ fun EntryDetailPage(navController: NavController, entryId: String) {
                             }
                     }
                 },
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
             ) {
                 Text("Delete Entry")
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Back Button
-            Button(onClick = { navController.popBackStack() }) {
+            // Back button
+            Button(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
+            ) {
                 Text("Back to Main Page")
             }
         }
     }
 }
+
+
 

@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import org.mockito.Mockito.mockStatic
 import com.example.travelitinerary.assignRole
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
@@ -95,14 +96,12 @@ class RegisterUnitTest {
     }
     @Test
     fun testRegisterWithEmptyFields() {
-        // Mock FirebaseAuth and FirebaseUser (if necessary)
         val mockAuth = mock(FirebaseAuth::class.java)
 
         // Simulate the register method call with empty fields
         val email = ""
         val password = ""
 
-        // Your registration logic (either in ViewModel or similar)
         val errorMessage = if (email.isBlank() || password.isBlank()) {
             "Please fill in all fields"
         } else {
@@ -115,11 +114,8 @@ class RegisterUnitTest {
     }
     @Test
     fun testRegisterWithInvalidEmail() {
-        // Simulate the user entering an invalid email and a valid password
         val email = "invalid-email"
         val password = "password123"
-
-        // Use a regular expression to validate the email format
         val emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$"
         val isValidEmail = email.matches(emailRegex.toRegex())
 
@@ -129,34 +125,47 @@ class RegisterUnitTest {
             "Registration successful"
         }
 
-        // Assert the expected outcome (invalid email validation)
+        // asserting the expected outcome (invalid email validation)
         assertEquals("Please enter a valid email", errorMessage)
     }
     @Test
     fun testLoginWithInvalidCredentials() {
-        // Mock the authentication provider (FirebaseAuth)
+        // authentication provider (FirebaseAuth)
         val mockAuth = mock(FirebaseAuth::class.java)
-
-        // Create a mock AuthResult
-        val mockAuthResult = mock(AuthResult::class.java)
-
-        // Create a mock Task<AuthResult>
         val mockTask = mock(Task::class.java) as Task<AuthResult>
 
-        // Simulate that Firebase returns a failed task with an exception
+        // Firebase returns a failed task with an exception
         `when`(mockAuth.signInWithEmailAndPassword("invalid@example.com", "wrongpassword"))
             .thenReturn(mockTask)
 
-        // Simulate a failure when the task is executed
+        // failure when the task is executed
         `when`(mockTask.isSuccessful).thenReturn(false)
         `when`(mockTask.exception).thenReturn(Exception("Incorrect email or password"))
 
-        // Now call the login method (assuming it's a direct call to the FirebaseAuth)
+        //  calling the login method
         val result = login(mockAuth, "invalid@example.com", "wrongpassword")
 
-        // Verify that login failed
+        // Verifying that login failed
         assertFalse(result.isSuccessful)
         assertEquals(result.errorMessage, "Incorrect email or password")
+    }
+    @Test
+    fun test1LoginWithInvalidCredentials() {
+        val mockAuth = mock(FirebaseAuth::class.java)
+        val mockTask = mock(Task::class.java) as Task<AuthResult>
+
+        // Simulate Firebase returning a failed task
+        `when`(mockAuth.signInWithEmailAndPassword("invalid@example.com", "wrongpassword"))
+            .thenReturn(mockTask)
+        `when`(mockTask.isSuccessful).thenReturn(false)
+        `when`(mockTask.exception).thenReturn(FirebaseAuthInvalidCredentialsException("ERROR_WRONG_PASSWORD", "Incorrect email or password"))
+
+        // Call the login method
+        val result = login(mockAuth, "invalid@example.com", "wrongpassword")
+
+        // Verify login failed with the expected error message
+        assertFalse(result.isSuccessful)
+        assertEquals("Incorrect email or password", result.errorMessage)
     }
 
     private fun login(auth: FirebaseAuth?, email: String, password: String): LoginResult {
@@ -172,7 +181,7 @@ class RegisterUnitTest {
             }
         }
 
-        // If task is null (or auth is null), return a LoginResult indicating failure
+        // If task is null, return a LoginResult indicating failure
         return LoginResult(false, "Authentication failed.")
     }
 
@@ -208,12 +217,9 @@ class ProfileUnitTest {
 
     @Test
     fun testEditProfile() {
-        // Mocking TextUtils.isEmpty() statically
         mockStatic(TextUtils::class.java).use { mockedStatic ->
             // Mock the isEmpty method to return false
             mockedStatic.`when`<Boolean> { TextUtils.isEmpty(anyString()) }.thenReturn(false)
-
-            // Your usual test code here
             val mockAuth = mock(FirebaseAuth::class.java)
             val mockFirebaseUser = mock(FirebaseUser::class.java)
             val mockNavController = mock(NavController::class.java)
@@ -223,16 +229,15 @@ class ProfileUnitTest {
             `when`(mockFirebaseUser.displayName).thenReturn("Old Name")
             `when`(mockFirebaseUser.email).thenReturn("olduser@example.com")
 
-            // Simulate the editing process (new name and email)
+            // Simulate the editing process (new name)
             val newName = "New Name"
-            val newEmail = "newuser@example.com"
 
             // Prepare the UserProfileChangeRequest with new name
             val userProfileChangeRequest = UserProfileChangeRequest.Builder()
                 .setDisplayName(newName)
                 .build()
 
-            // Mock the profile update task (assuming success)
+            // Mock the profile update task
             val mockTask = mock(Task::class.java) as Task<Void>
             `when`(mockFirebaseUser.updateProfile(userProfileChangeRequest)).thenReturn(mockTask)
             `when`(mockTask.isSuccessful).thenReturn(true) // Simulating successful profile update
@@ -258,7 +263,6 @@ class ModerationUnitTest {
         val mockDocuments = mock(QuerySnapshot::class.java)
         val mockDocument = mock(DocumentSnapshot::class.java)
 
-        // Mock Task<QuerySnapshot> instead of Task<Void>
         val mockTask: Task<QuerySnapshot> =
             mock(Task::class.java) as Task<QuerySnapshot> // Correct Task<QuerySnapshot> mock
         val mockQuerySnapshot: QuerySnapshot = mock(QuerySnapshot::class.java)
@@ -274,19 +278,18 @@ class ModerationUnitTest {
 
         // Mock the behavior of the Task
         `when`(mockTask.isSuccessful).thenReturn(true)
-        `when`(mockTask.result).thenReturn(mockQuerySnapshot) // Set the result to return mock QuerySnapshot
+        `when`(mockTask.result).thenReturn(mockQuerySnapshot)
 
         // Set up mock behavior for the QuerySnapshot
-        `when`(mockQuerySnapshot.isEmpty).thenReturn(false) // Simulate that we have some documents
-        `when`(mockQuerySnapshot.documents).thenReturn(listOf(mockDocument)) // Return a list with mockDocument
+        `when`(mockQuerySnapshot.isEmpty).thenReturn(false)
+        `when`(mockQuerySnapshot.documents).thenReturn(listOf(mockDocument))
 
         // Mock the DocumentSnapshot behavior
-        `when`(mockDocument.getString("role")).thenReturn("user") // Role is "user"
-        `when`(mockDocument.id).thenReturn("userId") // Mock document ID
+        `when`(mockDocument.getString("role")).thenReturn("user")
+        `when`(mockDocument.id).thenReturn("userId")
 
         val currentModeratorEmail = "moderator@example.com"
 
-        // Define the assignRole logic directly in the test
         val assignRoleMock: (String, String, String?, () -> Unit, (String) -> Unit) -> Unit =
             { userId, newRole, blockedBy, onSuccess, onFailure ->
                 val updates = mutableMapOf<String, Any>("role" to newRole)
@@ -294,7 +297,6 @@ class ModerationUnitTest {
                 if (newRole == "blocked" && blockedBy != null) {
                     updates["blockedBy"] = blockedBy
                 } else if (newRole == "user") {
-                    // Remove the blockedBy field completely from Firestore when unblocking
                     updates["blockedBy"] = FieldValue.delete()
                 }
 
@@ -326,7 +328,6 @@ class ModerationUnitTest {
         userEmail: String,
         assignRole: (String, String, String?, () -> Unit, (String) -> Unit) -> Unit
     ) {
-        // Assuming this is what your blockUser function does
         firestore.collection("users")
             .whereEqualTo("email", userEmail)
             .get()

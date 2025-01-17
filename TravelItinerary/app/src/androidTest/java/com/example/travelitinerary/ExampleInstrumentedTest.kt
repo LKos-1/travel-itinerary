@@ -55,7 +55,7 @@ class RegisterScreenTest {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = "register") {
                 composable("register") { RegisterScreen(navController = navController) }
-                composable("main-page") { MainPage(navController) } // Mock main page
+                composable("main-page") { MainPage(navController) }
                 composable("login", content = { Text("Log In", modifier = Modifier.testTag("LoginForm")) })
             }
         }
@@ -76,12 +76,11 @@ class RegisterScreenTest {
 
     @Test
     fun testRegisterWithEmptyFields() {
-        // Launch the RegisterScreen
         composeTestRule.setContent {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = "register") {
                 composable("register") { RegisterScreen(navController = navController) }
-                composable("main-page") { MainPage(navController) } // Mock main page
+                composable("main-page") { MainPage(navController) }
             }
         }
 
@@ -99,7 +98,7 @@ class RegisterScreenTest {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = "register") {
                 composable("register") { RegisterScreen(navController = navController) }
-                composable("main-page") { MainPage(navController) } // Mock main page
+                composable("main-page") { MainPage(navController) }
             }
         }
 
@@ -143,7 +142,7 @@ class RegisterScreenTest {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = "login") {
                 composable("register") { RegisterScreen(navController) }
-                composable("main-page") { MainPage(navController) } // Mock main page
+                composable("main-page") { MainPage(navController) }
                 composable("login") { LoginForm(navController) }
             }
         }
@@ -170,7 +169,6 @@ class ModeratorScreenTest{
     val composeTestRule = createComposeRule()
     @Test
     fun testBlockUser() {
-        // Launch ModeratorMainPage
         composeTestRule.setContent {
             ModeratorMainPage(navController = rememberNavController(), currentModeratorEmail = "moderator@example.com")
         }
@@ -181,13 +179,11 @@ class ModeratorScreenTest{
         // Click the Block User button
         composeTestRule.onNodeWithText("Block User").performClick()
 
-        // Force recomposition by modifying state directly or triggering an additional action
         composeTestRule.setContent {
-            // Update the status message to force recomposition
             ModeratorMainPage(navController = rememberNavController(), currentModeratorEmail = "moderator@example.com")
         }
 
-        // Now, verify that the success message is displayed
+        // verify that the success message is displayed
         composeTestRule.onNodeWithText("User has been blocked successfully.").assertExists()
 
         // Simulate the blocked user trying to log in
@@ -200,7 +196,6 @@ class ModeratorScreenTest{
     }
     @Test
     fun testUnblockUser() {
-        // Launch ModeratorMainPage
         composeTestRule.setContent {
             ModeratorMainPage(navController = rememberNavController(), currentModeratorEmail = "moderator@example.com")
         }
@@ -216,12 +211,9 @@ class ModeratorScreenTest{
 
         // Simulate the unblocked user trying to log in
         composeTestRule.setContent {
-            // Assume this is the login screen or normal main page after unblocking
-            // Add logic for checking that the user is no longer blocked
         }
 
         // Verify the user can now access their account
-        // (test the login flow to confirm they can log in again)
     }
     @Test
     fun testPromoteUser() {
@@ -239,7 +231,7 @@ class ModeratorScreenTest{
         // Verify that the success message is displayed
         composeTestRule.onNodeWithText("User has been promoted to moderator successfully.").assertExists()
 
-        // Verify that the user now has moderator privileges (you can simulate navigating to a moderator page)
+        // Verify that the user now has moderator privileges
         composeTestRule.setContent {
             // Verify access to moderator actions
         }
@@ -250,7 +242,7 @@ class ModeratorScreenTest{
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = "add-entry") {
                 composable("add-entry") { AddEntryPage(navController) }
-                composable("main-page") { MainPage(navController) } // Mock main page
+                composable("main-page") { MainPage(navController) }
             }
         }
 

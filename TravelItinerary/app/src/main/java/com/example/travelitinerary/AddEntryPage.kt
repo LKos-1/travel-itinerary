@@ -315,14 +315,14 @@ fun AddEntryPage(navController: NavController, entryId: String? = null) {
                                 (documentReference as DocumentReference).collection("destinations")
                             }
 
-                            // Check for existing destinations and only add new ones
+                            // Checking for existing destinations and only add new ones
                             selectedDestinations.forEach { destination ->
-                                // Query if the destination already exists
+                                // if the destination already exists
                                 destinationsRef.whereEqualTo("name", destination)
                                     .get()
                                     .addOnSuccessListener { querySnapshot ->
                                         if (querySnapshot.isEmpty) {
-                                            // If the destination doesn't exist, add it
+                                            // If it doesn't exist, adding it
                                             destinationsRef.add(mapOf("name" to destination))
                                                 .addOnSuccessListener {
                                                     Log.d("Firestore", "Destination added successfully: $destination")
